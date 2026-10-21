@@ -4,26 +4,36 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<title>Referencial — triagem</title>
+<title>Triagem dos artigos</title>
+<!--
+  Página de triagem do celular. Desde 20/10/2026 usa o MESMO núcleo da página Artigos × Bases
+  da tese (triagem-nucleo.js, cópia de tools/bases/triagem-pagina.js do repositório phd, posta
+  aqui por tools/triagem/sincroniza_celular.py — não edite o núcleo aqui). Mesmos arquivos
+  (triagem-tese.csv para a base, triagem-candidatos.csv para os candidatos), mesmo formato do
+  store em Python, mesmas regras ("fora" pede motivo nas marcações novas; página que não bate
+  com o repositório fica só leitura).
+  Online (GitHub Pages): grava no repositório privado com o seu token. No computador: aberta
+  pelo serve.py em http://127.0.0.1:8765/triagem/, grava nos arquivos locais.
+-->
 <style>
   :root{
-    --bg:#f6f7f9; --card:#fff; --ink:#14181f; --mut:#5b6472; --line:#e3e7ee;
+    --bg:#f6f7f9; --card:#fff; --ink:#14181f; --mut:#5b6472; --line:#e3e7ee; --line2:#c9d0da;
     --inc:#1a7f37; --incbg:#e7f4ea; --fora:#b42318; --forabg:#fdeceb;
-    --accent:#0b62d6; --accentink:#fff; --chip:#eef1f6;
+    --accent:#0b62d6; --accentink:#fff; --chip:#eef1f6; --paper:#fff;
   }
   @media (prefers-color-scheme: dark){
-    :root{ --bg:#0f1216; --card:#171b21; --ink:#e8ebf0; --mut:#9aa4b2; --line:#262c35;
+    :root{ --bg:#0f1216; --card:#171b21; --ink:#e8ebf0; --mut:#9aa4b2; --line:#262c35; --line2:#3a434f;
       --inc:#4ac26b; --incbg:#12271a; --fora:#f2776b; --forabg:#2a1614;
-      --accent:#4c8dff; --accentink:#0b1220; --chip:#212832; }
+      --accent:#4c8dff; --accentink:#0b1220; --chip:#212832; --paper:#171b21; }
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0}
   body{background:var(--bg);color:var(--ink);font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
     padding-bottom:env(safe-area-inset-bottom)}
   header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);
-    padding:10px 12px calc(8px);padding-top:calc(10px + env(safe-area-inset-top))}
-  h1{font-size:16px;margin:0 0 8px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
-  .counts{font-size:12px;color:var(--mut);font-weight:500}
+    padding:10px 12px 8px;padding-top:calc(10px + env(safe-area-inset-top))}
+  h1{font-size:16px;margin:0 0 8px;font-weight:700}
+  .counts{font-size:12px;color:var(--mut);font-weight:500;margin:0 0 8px}
   .counts b{color:var(--ink)}
   input[type=search]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;
     background:var(--card);color:var(--ink);font-size:16px}
@@ -32,304 +42,119 @@
   .filters button{white-space:nowrap;border:1px solid var(--line);background:var(--card);color:var(--mut);
     padding:6px 12px;border-radius:999px;font-size:13px;font-weight:600}
   .filters button.on{background:var(--accent);color:var(--accentink);border-color:var(--accent)}
-  main{padding:10px 12px 96px;max-width:760px;margin:0 auto}
+  main{padding:10px 12px 120px;max-width:760px;margin:0 auto}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0}
-  .card.inc{border-left:4px solid var(--inc)}
-  .card.fora{border-left:4px solid var(--fora);opacity:.72}
+  .card.inc{border-left:4px solid var(--inc)} .card.fora{border-left:4px solid var(--fora)}
   .ttl{font-size:15px;font-weight:600;margin:0 0 4px}
-  .meta{font-size:12px;color:var(--mut);margin:0 0 8px}
-  .chips{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 10px}
-  .chip{background:var(--chip);color:var(--mut);font-size:11px;padding:3px 8px;border-radius:999px}
-  .btns{display:flex;gap:8px}
-  .btns button{flex:1;padding:11px 0;border-radius:10px;border:1px solid var(--line);background:var(--card);
+  .meta{font-size:12px;color:var(--mut);margin:0}
+  .mais{display:block;width:100%;padding:12px;margin:12px 0;border:1px solid var(--line);border-radius:10px;
+    background:var(--card);color:var(--accent);font-size:15px;font-weight:700}
+  /* núcleo: botões de cada artigo */
+  .trc{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .trc button{flex:1;min-width:84px;padding:11px 0;border-radius:10px;border:1px solid var(--line);background:var(--card);
     color:var(--ink);font-size:14px;font-weight:700}
-  .btns .binc.on{background:var(--incbg);color:var(--inc);border-color:var(--inc)}
-  .btns .bfora.on{background:var(--forabg);color:var(--fora);border-color:var(--fora)}
-  .btns .bclr{flex:0 0 44px;color:var(--mut);font-weight:400}
-  .motivo{margin-top:8px;width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;
-    background:var(--bg);color:var(--ink);font-size:14px;display:none}
-  .card.fora .motivo{display:block}
-  .savebar{position:fixed;left:0;right:0;bottom:0;z-index:6;padding:10px 12px calc(10px + env(safe-area-inset-bottom));
-    background:linear-gradient(transparent,var(--bg) 22%);display:none}
-  .savebar.show{display:block}
-  .savebar button{width:100%;max-width:760px;margin:0 auto;display:block;padding:14px;border:0;border-radius:12px;
-    background:var(--accent);color:var(--accentink);font-size:16px;font-weight:700}
-  .savebar button:disabled{opacity:.6}
-  .panel{max-width:520px;margin:40px auto;padding:20px;background:var(--card);border:1px solid var(--line);border-radius:14px}
+  .trc button[data-a=limpa]{flex:0 0 44px;min-width:0;color:var(--mut);font-weight:400}
+  .trc button.on.inc{background:var(--incbg);color:var(--inc);border-color:var(--inc)}
+  .trc button.on.nao{background:var(--forabg);color:var(--fora);border-color:var(--fora)}
+  .trc .trmot{flex:1 0 100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-size:15px}
+  .trc .trmot.falta{border:2px solid var(--fora)}
+  .trc.mud{outline:2px dashed #d9a441;outline-offset:3px;border-radius:8px}
+  .trc .s,.s{font-size:12px;color:var(--mut)}
+  /* núcleo: barra de modo, salvar e conectar — fixa no pé */
+  #trbar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-top:1px solid var(--line);
+    padding:10px 12px calc(10px + env(safe-area-inset-bottom));font-size:13px;display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
+  #trbar button{padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:14px;font-weight:600}
+  #trbar #trsalva,#trbar #trtokok,#trbar #trconecta{background:var(--accent);color:var(--accentink);border-color:var(--accent);font-weight:700}
+  #trbar #trtok{flex:1 0 100%;gap:6px} #trbar #trtokv{flex:1;min-width:0;width:auto;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-size:16px}
+  .trerro{color:var(--fora);font-weight:600;flex:1 0 100%}
+  .panel{max-width:520px;margin:24px auto;padding:20px;background:var(--card);border:1px solid var(--line);border-radius:14px}
   .panel h2{margin:0 0 10px;font-size:18px}
   .panel p,.panel li{font-size:14px;color:var(--mut)}
   .panel code{background:var(--chip);padding:1px 6px;border-radius:6px;color:var(--ink);font-size:13px}
-  .panel input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--bg);
-    color:var(--ink);font-size:16px;margin:10px 0}
-  .panel .go{width:100%;padding:13px;border:0;border-radius:10px;background:var(--accent);color:var(--accentink);
-    font-size:16px;font-weight:700}
-  .toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:var(--ink);color:var(--bg);
-    padding:10px 16px;border-radius:999px;font-size:13px;font-weight:600;opacity:0;transition:.2s;z-index:9;max-width:90%}
-  .toast.show{opacity:.95}
-  .err{color:var(--fora);font-size:13px;margin-top:8px;min-height:1em}
   .link{color:var(--accent);text-decoration:none}
-  .small{font-size:12px;color:var(--mut)}
-  .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
 </style>
 </head>
 <body>
 
+<header>
+  <h1>Triagem dos artigos</h1>
+  <div class="counts" id="counts">carregando…</div>
+  <input type="search" id="q" placeholder="buscar título, autor, id…" autocapitalize="off">
+  <div class="filters" id="fg">
+    <button data-g="todos" class="on">Todos</button>
+    <button data-g="Base da tese">Base da tese</button>
+    <button data-g="Candidato (triagem)">Candidatos</button>
+  </div>
+  <div class="filters" id="fe">
+    <button data-e="todos" class="on">Qualquer</button>
+    <button data-e="nada">Não revisados</button>
+    <button data-e="incluir">Incluir</button>
+    <button data-e="fora">Fora</button>
+    <button data-e="ns">Não salvos</button>
+  </div>
+</header>
+
 <div id="setup" class="panel" hidden>
-  <h2>Triagem do referencial</h2>
-  <p>Esta página lê e grava sua triagem direto no repositório privado
-     <code>antonioaurel/phd</code> pela API do GitHub. Para isso ela precisa de um
-     <b>token fine-grained</b> — criado por você, guardado só neste navegador.</p>
+  <h2>Conectar</h2>
+  <p>Esta página lê e grava a triagem direto no repositório privado <code>antonioaurel/phd</code> pela API do GitHub.
+     Para isso ela precisa de um <b>token fine-grained</b>, criado por você e guardado só neste navegador.
+     (No computador, aberta pelo <code>serve.py</code> em <code>http://127.0.0.1:8765/triagem/</code>, ela grava nos
+     arquivos locais e não precisa de token.)</p>
   <ol>
     <li>Abra <a class="link" target="_blank" rel="noopener"
         href="https://github.com/settings/personal-access-tokens/new">Fine-grained tokens</a>.</li>
     <li><b>Resource owner:</b> antonioaurel · <b>Repository access:</b> Only select repositories → <code>phd</code>.</li>
     <li><b>Repository permissions → Contents:</b> Read and write.</li>
-    <li>Gere e cole o token abaixo (começa com <code>github_pat_</code>).</li>
+    <li>Toque em <b>Conectar para triar</b> no pé da página e cole o token (começa com <code>github_pat_</code>).</li>
   </ol>
-  <input id="tok" type="password" autocomplete="off" autocapitalize="off" spellcheck="false"
-    placeholder="github_pat_…">
-  <button class="go" id="tokGo">Conectar</button>
-  <div class="err" id="setupErr"></div>
-  <p class="small">O token fica em <code>localStorage</code> deste aparelho e nunca aparece na URL nem no código
-     da página. Para sair, use “Trocar token” no topo.</p>
+  <p class="s">O token fica em <code>localStorage</code> deste aparelho (o mesmo da página Artigos × Bases publicada) e
+     nunca aparece na URL nem no código. Para sair, use “desconectar” no pé da página.</p>
 </div>
 
-<div id="app" hidden>
-  <header>
-    <h1><span>Referencial · triagem</span>
-        <a href="#" id="logout" class="small link">trocar token</a></h1>
-    <div class="counts" id="counts">carregando…</div>
-    <input type="search" id="q" placeholder="buscar título, autor, id…" autocapitalize="off">
-    <div class="filters" id="filters">
-      <button data-f="todos" class="on">Todos</button>
-      <button data-f="novos">Não revisados</button>
-      <button data-f="incluir">Incluir</button>
-      <button data-f="fora">Fora</button>
-    </div>
-  </header>
-  <main id="list"></main>
-  <div class="savebar" id="savebar">
-    <button id="save">Salvar <span id="nd">0</span> alteração(ões)</button>
-  </div>
-</div>
+<main id="list"></main>
+<div id="trbar"></div>
 
-<div class="toast" id="toast"></div>
-
+<script src="triagem-nucleo.js"></script>
 <script>
 "use strict";
-const CFG = { owner:"antonioaurel", repo:"phd", branch:"main",
-  articles:"papers/data/articles.json", triagem:"papers/data/triagem-tese.csv" };
-const API = `https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents`;
 const $ = s => document.querySelector(s);
-
-let TOKEN = localStorage.getItem("ghpat") || "";
-let ARTS = [];                 // [{id,title,authors,year,origin,study_type,themes,thesis_axes}]
-let META = {};                 // id -> {titulo,ano,autores,origem}
-let BASE = {marcas:{},motivos:{},carimbos:{}}; // estado carregado do CSV
-let MARK = {};                 // estado atual (id -> 'incluir'|'fora'); ausência = não revisado
-let MOT  = {};                 // id -> motivo (só usado em 'fora')
-let SHA  = null;               // sha do triagem-tese.csv (null = ainda não existe)
-let FILTER = "todos", Q = "";
-
-/* ---------- utilidades ---------- */
-function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");
-  clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("show"),2200);}
-function b64decode(b64){const bin=atob(b64.replace(/\s/g,""));
-  const bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));return new TextDecoder("utf-8").decode(bytes);}
-function b64encode(str){const bytes=new TextEncoder().encode(str);let bin="";
-  for(let i=0;i<bytes.length;i+=0x8000){bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));}
-  return btoa(bin);}
-function nowISO(){const d=new Date(),p=n=>String(n).padStart(2,"0");
-  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;}
-function csvField(s){s=(s==null?"":String(s));return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}
-function limparMotivo(s){ // replica _limpar_motivo do store (Python isprintable): remove toda
-  // categoria Unicode C (Other) e Z (Separator), menos o espaco ASCII; colapsa; corta em 280 code points.
-  s=String(s==null?"":s).replace(/[\p{C}\p{Z}]/gu,ch=>ch===" "?" ":"").replace(/ +/g," ").trim();
-  return Array.from(s).slice(0,280).join("");}
-function sortIds(ids){ // replica key=(id[0], id[1:].zfill(6)) do store
-  return ids.slice().sort((x,y)=>{
-    if(x[0]!==y[0])return x[0]<y[0]?-1:1;
-    const a=x.slice(1).padStart(6,"0"),b=y.slice(1).padStart(6,"0");
-    return a<b?-1:a>b?1:0;});}
-function parseCSV(text){ // parser RFC4180 simples
-  const rows=[];let row=[],f="",i=0,q=false;text=text.replace(/^﻿/,"");
-  while(i<text.length){const c=text[i];
-    if(q){ if(c==='"'){ if(text[i+1]==='"'){f+='"';i+=2;continue;} q=false;i++;continue;} f+=c;i++;continue;}
-    if(c==='"'){q=true;i++;continue;}
-    if(c===','){row.push(f);f="";i++;continue;}
-    if(c==='\n'){row.push(f);rows.push(row);row=[];f="";i++;continue;}
-    if(c==='\r'){i++;continue;}
-    f+=c;i++;}
-  if(f.length||row.length){row.push(f);rows.push(row);}
-  return rows;}
-function parseTriagem(text){ // CSV -> {marcas,motivos,carimbos}, mesma limpeza do store
-  const out={marcas:{},motivos:{},carimbos:{}};const rows=parseCSV(text);
-  if(!rows.length)return out;const head=rows[0],ix=n=>head.indexOf(n);
-  for(let r=1;r<rows.length;r++){const row=rows[r];const id=(row[ix("id")]||"").trim();
-    const dec=(row[ix("decisao")]||"").trim().toLowerCase();
-    if(!id||(dec!=="incluir"&&dec!=="fora")||!META[id])continue;
-    out.marcas[id]=dec;out.motivos[id]=limparMotivo(row[ix("motivo")]||"");
-    out.carimbos[id]=(row[ix("marcado_em")]||"").trim();}
-  return out;}
-
-/* ---------- API GitHub ---------- */
-async function getFile(path){
-  const r=await fetch(`${API}/${path}?ref=${CFG.branch}`,{headers:{Authorization:`Bearer ${TOKEN}`,
-    Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"}});
-  if(r.status===404)return {missing:true};
-  if(r.status===401)throw new Error("token inválido ou sem acesso (401)");
-  if(!r.ok)throw new Error(`GitHub ${r.status} ao ler ${path}`);
-  const j=await r.json();return {content:b64decode(j.content),sha:j.sha};}
-async function putFile(path, text, sha, message){
-  const body={message,content:b64encode(text),branch:CFG.branch};if(sha)body.sha=sha;
-  const r=await fetch(`${API}/${path}`,{method:"PUT",headers:{Authorization:`Bearer ${TOKEN}`,
-    Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"},body:JSON.stringify(body)});
-  if(r.status===409||r.status===422){const j=await r.json().catch(()=>({}));const e=new Error("conflito");e.conflict=true;e.detail=j.message;throw e;}
-  if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(`GitHub ${r.status}: ${j.message||"erro ao gravar"}`);}
-  return (await r.json()).content.sha;}
-
-/* ---------- carga ---------- */
-async function carregar(){
-  $("#counts").textContent="carregando…";
-  const aj=await getFile(CFG.articles);
-  const doc=JSON.parse(aj.content);const lista=Array.isArray(doc)?doc:doc.articles;
-  ARTS=lista.filter(a=>a&&a.id);
-  META={};ARTS.forEach(a=>META[a.id]={titulo:a.title||"",ano:String(a.year||""),
-    autores:a.authors||"",origem:a.origin||""});
-  const tj=await getFile(CFG.triagem);
-  if(tj.missing){BASE={marcas:{},motivos:{},carimbos:{}};SHA=null;}
-  else{SHA=tj.sha;BASE=parseTriagem(tj.content);}
-  MARK={...BASE.marcas};MOT={...BASE.motivos};
-  render();
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let G = "todos", E = "todos", Q = "", N = 50;
+function passa(a) {
+  if (G !== "todos" && a.g !== G) return false;
+  const m = TRIAGEM.marcacao(a);
+  if (E === "nada" && m) return false;
+  if ((E === "incluir" || E === "fora") && m !== E) return false;
+  if (E === "ns" && !TRIAGEM.naoSalvo(a)) return false;
+  if (Q && !(a.i + " " + a.t + " " + a.au + " " + a.a).toLowerCase().includes(Q)) return false;
+  return true;
 }
-
-/* ---------- CSV de saída (replica o store) ---------- */
-function buildCSV(){
-  const ids=sortIds(Object.keys(MARK).filter(id=>MARK[id]==="incluir"||MARK[id]==="fora"));
-  const linhas=[["id","decisao","motivo","titulo","ano","autores","origem","marcado_em"]];
-  const agora=nowISO(); // um só carimbo por gravação, como o store (datetime.now() uma vez)
-  for(const id of ids){
-    const dec=MARK[id];
-    const motivo=limparMotivo(MOT[id]);
-    const inalterado=BASE.marcas[id]===dec && (BASE.motivos[id]||"")===motivo;
-    const carimbo=inalterado?(BASE.carimbos[id]||agora):agora;
-    const m=META[id];
-    linhas.push([id,dec,motivo,m.titulo,m.ano,m.autores,m.origem,carimbo]);
-  }
-  return linhas.map(r=>r.map(csvField).join(",")).join("\n")+"\n";
+function desenha() {
+  const leitura = TRIAGEM.modo() === "leitura";
+  document.getElementById("setup").hidden = !leitura;
+  const todos = leitura ? [] : TRIAGEM.artigos();
+  const inc = todos.filter(a => TRIAGEM.marcacao(a) === "incluir").length, fora = todos.filter(a => TRIAGEM.marcacao(a) === "fora").length;
+  $("#counts").innerHTML = leitura ? "conecte para ver os artigos" : !todos.length ? "carregando…"
+    : `<b>${inc}</b> incluir · <b>${fora}</b> fora · <b>${todos.length - inc - fora}</b> não revisados · ${todos.length} no total`;
+  const vis = todos.filter(passa);
+  $("#list").innerHTML = vis.slice(0, N).map(a => {
+    const m = TRIAGEM.marcacao(a);
+    return `<div class="card ${m === "incluir" ? "inc" : m === "fora" ? "fora" : ""}">
+      <p class="ttl">${esc(a.t || a.i)}</p>
+      <p class="meta">${esc(a.i)} · ${esc(String(a.a || "s/ ano").slice(0, 4))} · ${a.g === "Base da tese" ? "base da tese" : "candidato"}${a.au ? " · " + esc(a.au) : ""}${a.o ? " · " + esc(a.o) : ""}</p>
+      ${TRIAGEM.celula(a)}</div>`;
+  }).join("") + (vis.length > N ? `<button class="mais" id="mais">mostrar mais (${vis.length - N} restantes)</button>`
+    : (!vis.length && !leitura ? `<p class="s" style="text-align:center;margin-top:30px">nenhum artigo neste filtro</p>` : ""));
 }
-function dirtyCount(){let n=0;const ids=new Set([...Object.keys(BASE.marcas),...Object.keys(MARK)]);
-  for(const id of ids){const a=BASE.marcas[id]||"",b=MARK[id]||"";
-    if(a!==b){n++;continue;} if(b&&((BASE.motivos[id]||"")!==limparMotivo(MOT[id])))n++;}
-  return n;}
-
-/* ---------- salvar ---------- */
-// Captura o que a pessoa mexeu em relação ao BASE atual, para não se perder num
-// conflito. `set` = marcas/motivos que ela pôs ou trocou; `clr` = marcas que ela
-// removeu e existiam no BASE.
-function capturarEdicoes(){
-  const set={},clr=[];const ids=new Set([...Object.keys(BASE.marcas),...Object.keys(MARK)]);
-  for(const id of ids){
-    const antes=BASE.marcas[id]||"",agora=MARK[id]||"";
-    if(agora&&(agora!==antes||(BASE.motivos[id]||"")!==limparMotivo(MOT[id]))) set[id]={dec:agora,mot:MOT[id]||""};
-    else if(!agora&&antes) clr.push(id);
-  }
-  return {set,clr};
-}
-function reaplicarEdicoes({set,clr}){
-  for(const id in set){MARK[id]=set[id].dec;MOT[id]=set[id].mot;}
-  for(const id of clr){delete MARK[id];delete MOT[id];}
-}
-async function salvar(){
-  const btn=$("#save");btn.disabled=true;
-  try{
-    const csv=buildCSV();
-    const msg=`triagem: ${dirtyCount()} alteracao(oes) pelo celular`;
-    SHA=await putFile(CFG.triagem,csv,SHA,msg);
-    // O que acabamos de gravar É o disco (byte-idêntico), então BASE espelha `csv`
-    // sem outra ida à rede; o novo sha veio no retorno do PUT. dirtyCount zera.
-    BASE=parseTriagem(csv);
-    toast("salvo ✓");updateBar();
-  }catch(e){
-    if(e.conflict){
-      // Outro dispositivo gravou entre carregar e salvar. Recarrega o estado do
-      // disco mas preserva as marcas ainda não salvas desta pessoa, reaplicadas
-      // por cima — quem tocou o mesmo id, esta gravação vence ao salvar de novo.
-      const meu=capturarEdicoes();
-      await carregar();
-      reaplicarEdicoes(meu);
-      render();
-      toast("outro dispositivo gravou; suas marcas foram mantidas — salve de novo");
-    }
-    else{toast("erro: "+e.message);}
-  }finally{btn.disabled=false;}
-}
-
-/* ---------- render ---------- */
-function matches(a){
-  if(FILTER==="incluir"&&MARK[a.id]!=="incluir")return false;
-  if(FILTER==="fora"&&MARK[a.id]!=="fora")return false;
-  if(FILTER==="novos"&&(MARK[a.id]==="incluir"||MARK[a.id]==="fora"))return false;
-  if(Q){const h=(a.id+" "+(a.title||"")+" "+(a.authors||"")+" "+(a.year||"")).toLowerCase();
-    if(!h.includes(Q))return false;}
-  return true;}
-function chipsOf(a){const t=[...(a.themes||[]),...(a.thesis_axes||[])];
-  return t.slice(0,4).map(x=>`<span class="chip">${esc(x)}</span>`).join("");}
-function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
-function render(){
-  const list=$("#list");const vis=ARTS.filter(matches);
-  list.innerHTML=vis.map(a=>{
-    const st=MARK[a.id]||"";const cls=st==="incluir"?"inc":st==="fora"?"fora":"";
-    return `<div class="card ${cls}" data-id="${esc(a.id)}">
-      <p class="ttl">${esc(a.title||a.id)}</p>
-      <p class="meta">${esc(a.id)} · ${esc(a.year||"s/ano")} · ${esc(a.authors||"")}</p>
-      ${chipsOf(a)?`<div class="chips">${chipsOf(a)}</div>`:""}
-      <div class="btns">
-        <button class="binc ${st==="incluir"?"on":""}" data-a="incluir">Incluir</button>
-        <button class="bfora ${st==="fora"?"on":""}" data-a="fora">Fora</button>
-        <button class="bclr" data-a="clr" title="limpar">✕</button>
-      </div>
-      <input class="motivo" data-id="${esc(a.id)}" placeholder="motivo (por que fora?)" value="${esc(MOT[a.id]||"")}">
-    </div>`;}).join("") || `<p class="small" style="text-align:center;margin-top:30px">nenhum artigo neste filtro</p>`;
-  updateCounts();updateBar();
-}
-function updateCounts(){
-  const inc=Object.values(MARK).filter(v=>v==="incluir").length;
-  const fora=Object.values(MARK).filter(v=>v==="fora").length;
-  $("#counts").innerHTML=`<b>${inc}</b> incluir · <b>${fora}</b> fora · <b>${ARTS.length-inc-fora}</b> não revisados · ${ARTS.length} no total`;}
-function updateBar(){const n=dirtyCount();$("#nd").textContent=n;
-  $("#savebar").classList.toggle("show",n>0);}
-
-/* ---------- eventos ---------- */
-$("#list").addEventListener("click",e=>{
-  const btn=e.target.closest("button[data-a]");if(!btn)return;
-  const id=btn.closest(".card").dataset.id;const act=btn.dataset.a;
-  if(act==="clr"){delete MARK[id];delete MOT[id];}
-  else{MARK[id]=(MARK[id]===act)?undefined:act; if(MARK[id]===undefined)delete MARK[id];}
-  render();});
-$("#list").addEventListener("input",e=>{
-  const inp=e.target.closest("input.motivo");if(!inp)return;
-  MOT[inp.dataset.id]=inp.value;updateBar();});
-$("#q").addEventListener("input",e=>{Q=e.target.value.trim().toLowerCase();render();});
-$("#filters").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
-  FILTER=b.dataset.f;[...$("#filters").children].forEach(x=>x.classList.toggle("on",x===b));render();});
-$("#save").addEventListener("click",salvar);
-$("#logout").addEventListener("click",e=>{e.preventDefault();
-  if(confirm("Remover o token deste aparelho?")){localStorage.removeItem("ghpat");location.reload();}});
-$("#tokGo").addEventListener("click",async()=>{
-  const t=$("#tok").value.trim();if(!t){$("#setupErr").textContent="cole o token";return;}
-  $("#setupErr").textContent="conectando…";TOKEN=t;
-  try{await carregar();localStorage.setItem("ghpat",t);
-    $("#setup").hidden=true;$("#app").hidden=false;}
-  catch(e){TOKEN="";$("#setupErr").textContent=e.message;}});
-
-/* ---------- boot ---------- */
-(async function(){
-  if(!TOKEN){$("#setup").hidden=false;return;}
-  $("#app").hidden=false;
-  try{await carregar();}
-  catch(e){$("#app").hidden=true;$("#setup").hidden=false;$("#setupErr").textContent=e.message;}
-})();
+document.addEventListener("click", e => {
+  if (e.target.id === "mais") { N += 50; return desenha(); }
+  const g = e.target.closest("#fg button"), f = e.target.closest("#fe button");
+  if (g) { G = g.dataset.g; N = 50; [...$("#fg").children].forEach(x => x.classList.toggle("on", x === g)); desenha(); }
+  if (f) { E = f.dataset.e; N = 50; [...$("#fe").children].forEach(x => x.classList.toggle("on", x === f)); desenha(); }
+});
+$("#q").addEventListener("input", e => { Q = e.target.value.trim().toLowerCase(); N = 50; desenha(); });
+TRIAGEM.liga(desenha, null);  // sem retrato: a lista vem dos arquivos do repositório (ou do serve.py)
+desenha();
 </script>
 </body>
 </html>
